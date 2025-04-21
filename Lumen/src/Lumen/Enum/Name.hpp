@@ -12,7 +12,7 @@ namespace Lumen::Enum
     // Public functions
     ////////////////////////////////////////////////////////////////////////////////////
     template<typename TEnum> requires(std::is_enum_v<TEnum>)
-    constexpr std::string_view Name(const TEnum value)
+    constexpr std::string_view Name(const TEnum value) // Note: This function doesn't need to optimized, since it should only be used during Debug builds.
     {
         constexpr const auto entries = Lumen::Internal::Enum::Entries<TEnum>;
         

@@ -1,5 +1,9 @@
 #pragma once
 
+#include "Lumen/Internal/Utils/Settings.hpp"
+
+#include "Lumen/Core/Core.hpp"
+
 #include <cstdint>
 #include <cstdlib>
 #include <string>
@@ -91,23 +95,24 @@ namespace Lumen::Internal
     ////////////////////////////////////////////////////////////////////////////////////
 	namespace Log
 	{
+
         ////////////////////////////////////////////////////////////////////////////////////
         // Print
         ////////////////////////////////////////////////////////////////////////////////////
         template <typename... TArgs>
-        void Print(std::string_view msg)
+        forceinline void Print(std::string_view msg)
         {
             std::cout << msg << Colour::Reset;
         }
 
 		template<typename ...TArgs>
-		void PrintF(std::format_string<TArgs...> fmt, TArgs&&... args)
+        forceinline void PrintF(std::format_string<TArgs...> fmt, TArgs&&... args)
 		{
             std::cout << std::format(fmt, std::forward<TArgs>(args)...) << Colour::Reset;
 		}
 
         template<typename... TArgs>
-        void PrintLn(std::format_string<TArgs...> fmt, TArgs&&... args)
+        forceinline void PrintLn(std::format_string<TArgs...> fmt, TArgs&&... args)
         {
             PrintF(fmt, std::forward<TArgs>(args)...);
             std::cout << '\n';
@@ -119,7 +124,7 @@ namespace Lumen::Internal
 		enum class Level : uint8_t { Trace, Info, Warn, Error, Fatal };
         
         template<Level level>
-        inline std::string LevelTag()
+        forceinline std::string_view LevelTag()
         {
             if constexpr (level == Level::Trace)
                 return "T";
@@ -131,27 +136,22 @@ namespace Lumen::Internal
                 return "E";
             else if constexpr (level == Level::Fatal)
                 return "F";
-
-            //return "Unset Tag";
         }
 
         template<Level level, typename ...TArgs>
         void PrintLvl(std::format_string<TArgs...> fmt, TArgs&&... args)
         {
-            std::string tag = LevelTag<level>();
             std::string time;
             {
                 auto now = std::chrono::system_clock::now();
                 std::time_t nowTime = std::chrono::system_clock::to_time_t(now);
 
-                std::tm localTime = *std::localtime(&nowTime);
-
                 std::ostringstream oss;
-                oss << std::put_time(&localTime, "%H:%M:%S");
+                oss << std::put_time(std::localtime(&nowTime), "%H:%M:%S");
                 time = oss.str();
             }
 
-            std::string message = std::format("[{0}] [{1}]: {2}", time, tag, std::format(fmt, std::forward<TArgs>(args)...));
+            std::string message = std::format("[{0}] [{1}]: {2}", time, LevelTag<level>(), std::format(fmt, std::forward<TArgs>(args)...));
 
             // Set colour
             if constexpr (level == Level::Trace)
@@ -169,6 +169,7 @@ namespace Lumen::Internal
             Print(message);
             std::cout << '\n';
         }
+
     };
 
     #ifndef LU_CONFIG_DIST

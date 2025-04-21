@@ -12,6 +12,7 @@ namespace Lumen::Internal
 		#define LU_COMPILER_GCC
 	#endif
 
+	// Platform
 	#if (defined(_WIN32) || defined(_WIN64)) && (!defined(LU_PLATFORM_WINDOWS) && !defined(LU_PLATFORM_DESKTOP))
 		#define LU_PLATFORM_WINDOWS
 		#define LU_PLATFORM_DESKTOP
@@ -40,6 +41,7 @@ namespace Lumen::Internal
 		#define LU_PLATFORM_APPLE
 	#endif
 
+	// Cpp standard
 	#define LU_CPPSTD_11 11
 	#define LU_CPPSTD_14 14
 	#define LU_CPPSTD_17 17

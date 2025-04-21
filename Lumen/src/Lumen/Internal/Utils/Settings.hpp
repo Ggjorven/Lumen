@@ -37,13 +37,6 @@ namespace Lumen::Internal::Info
 		Cpp26 = LU_CPPSTD_26,
 	};
 
-	enum class RenderingAPI : uint8_t
-	{
-		Vulkan = 0,
-		// OpenGL,
-		// DirectX11,
-	};
-
 	////////////////////////////////////////////////////////////////////////////////////
 	// Values
 	////////////////////////////////////////////////////////////////////////////////////
@@ -68,7 +61,5 @@ namespace Lumen::Internal::Info
 	#endif
 
 	inline constexpr const CppStd g_CppStd = static_cast<CppStd>(LU_CPPSTD);
-
-	inline constexpr const RenderingAPI g_RenderingAPI = RenderingAPI::Vulkan;
 
 }
