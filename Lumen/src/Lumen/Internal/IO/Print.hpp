@@ -124,7 +124,7 @@ namespace Lumen::Internal
 		enum class Level : uint8_t { Trace, Info, Warn, Error, Fatal };
         
         template<Level level>
-        forceinline std::string_view LevelTag()
+        constexpr std::string_view LevelTag()
         {
             if constexpr (level == Level::Trace)
                 return "T";

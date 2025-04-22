@@ -10,7 +10,7 @@ namespace Lumen::Internal
 	{
     public:
         // Hash functions
-        inline static constexpr size_t fnv1a(const std::string_view str)
+        static constexpr size_t fnv1a(const std::string_view str)
         {
             constexpr size_t fnvPrime = 1099511628211ULL;
             constexpr size_t offsetBasis = 14695981039346656037ULL;
@@ -27,7 +27,7 @@ namespace Lumen::Internal
 
     public:
         // Helper functions
-        inline static constexpr size_t Combine(const size_t hash1, const size_t hash2)
+        static constexpr size_t Combine(const size_t hash1, const size_t hash2)
         {
             size_t combined = hash1 + 0x9e3779b97f4a7c15;
             combined = (combined ^ (hash2 >> 30)) * 0xbf58476d1ce4e5b9;

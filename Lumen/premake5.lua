@@ -21,6 +21,7 @@ project "Lumen"
 	{
 		"src/Lumen/**.h",
 		"src/Lumen/**.hpp",
+		"src/Lumen/**.inl",
 		"src/Lumen/**.cpp"
 	}
 

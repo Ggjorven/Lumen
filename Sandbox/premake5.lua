@@ -19,6 +19,7 @@ project "Sandbox"
 	{
 		"src/**.h",
 		"src/**.hpp",
+		"src/**.inl",
 		"src/**.cpp"
 	}
 
