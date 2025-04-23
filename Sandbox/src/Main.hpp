@@ -9,32 +9,8 @@
 
 using namespace Lumen;
 
-struct MyStruct
-{
-public:
-	int a;
-	float b;
-	double c;
-
-public:
-	MyStruct(int a, float b, double c)
-		: a(a), b(b), c(c)
-	{
-		LU_LOG_INFO("MyStruct: a = {}, b = {}, c = {}", a, b, c);
-	}
-};
-
 int Main(int argc, char* argv[])
 {
-	LU_LOG_TRACE("Trace message");
-	LU_LOG_INFO("Info message");
-	LU_LOG_WARN("Warn message");
-	LU_LOG_ERROR("Error message");
-	LU_LOG_FATAL("Fatal message");
-
-	DeferredConstruct<MyStruct> myStruct;
-	myStruct.Construct(1, 2.0f, 3.0);
-
 	DeferredConstruct<Internal::Window> window;
 	window.Construct(Internal::WindowSpecification({
 		.Title = "Lumen", 
@@ -42,8 +18,23 @@ int Main(int argc, char* argv[])
 		.Width = 1280,
 		.Height = 720,
 
+		.EventCallback = [&](Event event) -> void 
+		{ 
+			EventHandler handler(event);
+			handler.Handle<WindowCloseEvent>([&](WindowCloseEvent&) -> void { window->Close(); });
+			handler.Handle<WindowResizeEvent>([&](WindowResizeEvent& e) -> void { window->Resize(e.GetWidth(), e.GetHeight()); });
+		},
+
 		.VSync = true,
 	}));
+
+
+	while (window->IsOpen())
+	{
+		window->PollEvents();
+
+		window->SwapBuffers();
+	}
 
 	return 0;
 }

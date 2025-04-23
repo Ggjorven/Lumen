@@ -54,7 +54,7 @@ namespace Lumen
 	
 	private:
 		// std::aligned_storage is deprecated as of C++23
-		alignas(T) std::byte m_Storage[sizeof(T)];
+		alignas(T) std::byte m_Storage[sizeof(T)] = {};
 
 		#if defined(LU_CONFIG_DEBUG)
 		bool m_Constructed = false;

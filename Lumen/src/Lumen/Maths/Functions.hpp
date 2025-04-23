@@ -1,7 +1,8 @@
 #pragma once
 
-#include "Lumen/Core/Core.hpp"
 #include "Lumen/Internal/Utils/Profiler.hpp"
+
+#include "Lumen/Core/Core.hpp"
 
 #include "Lumen/Maths/Structs.hpp"
 

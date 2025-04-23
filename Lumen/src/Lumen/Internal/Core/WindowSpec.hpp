@@ -6,6 +6,8 @@
 
 #include "Lumen/Core/Events.hpp"
 
+#include "Lumen/Internal/IO/Print.hpp"
+
 namespace Lumen::Internal
 {
 

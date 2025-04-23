@@ -1,8 +1,9 @@
 #pragma once
 
-#include "Lumen/Internal/Core/WindowSpec.hpp"
-#include "Lumen/Internal/Utils/Preprocessor.hpp"
 #include "Lumen/Internal/Utils/Profiler.hpp"
+#include "Lumen/Internal/Utils/Preprocessor.hpp"
+
+#include "Lumen/Internal/Core/WindowSpec.hpp"
 //#include "Lumen/Internal/Renderer/Renderer.hpp"
 
 #include "Lumen/Core/Core.hpp"
