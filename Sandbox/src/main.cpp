@@ -7,7 +7,7 @@ int main(int argc, char* argv[])
 }
 #elif defined(LU_PLATFORM_WINDOWS) // WindowedApp on windows
 #include <Windows.h>
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, int nCmdShow)
+int WINAPI WinMain(HINSTANCE, HINSTANCE, PSTR, int)
 {
 	return Main(__argc, __argv);
 }

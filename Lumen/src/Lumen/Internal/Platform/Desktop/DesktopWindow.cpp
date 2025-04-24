@@ -2,9 +2,9 @@
 #include "DesktopWindow.hpp"
 
 #include "Lumen/Internal/IO/Print.hpp"
-//#include "Lumen/Internal/Utils/Profiler.hpp"
+#include "Lumen/Internal/Utils/Profiler.hpp"
 
-//#include "Lumen/Internal/Renderer/GraphicsContext.hpp"
+#include "Lumen/Internal/Renderer/GraphicsContext.hpp"
 
 namespace Lumen::Internal
 {
@@ -46,9 +46,9 @@ namespace Lumen::Internal
         LU_ASSERT(m_Window, "[DesktopWindow] Failed to create a window.");
 
         // Initialize context
-        // GraphicsContext::AttachWindow(static_cast<void*>(m_Window));
-        // if (!GraphicsContext::Initialized())
-        //     GraphicsContext::Init();
+        GraphicsContext::AttachWindow(static_cast<void*>(m_Window));
+        if (!GraphicsContext::Initialized())
+            GraphicsContext::Init();
 
         // Making sure we can access the data in the callbacks
         glfwSetWindowUserPointer(m_Window, (void*)&m_Specification);
@@ -161,7 +161,7 @@ namespace Lumen::Internal
         bool destroy = (--s_GLFWInstances == 0);
         if (destroy)
         {
-            //GraphicsContext::Destroy();
+            GraphicsContext::Destroy();
         }
 
         glfwDestroyWindow(m_Window);

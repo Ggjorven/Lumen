@@ -28,12 +28,29 @@ int Main(int argc, char* argv[])
 		.VSync = true,
 	}));
 
+	double lastTime = window->GetTime();
+	double deltaTime = 0.0f;
+	double timer = 0.0f;
+	uint32_t frameCount = 0;
 
 	while (window->IsOpen())
 	{
 		window->PollEvents();
 
 		window->SwapBuffers();
+
+		deltaTime = window->GetTime() - lastTime;
+		lastTime = window->GetTime();
+		timer += deltaTime;
+		frameCount++;
+
+		if (timer >= 1.0f)
+		{
+			LU_LOG_INFO("FPS: {0}", frameCount);
+			window->SetTitle(std::format("Lumen - FPS: {0}", frameCount));
+			timer = 0.0f;
+			frameCount = 0;
+		}
 	}
 
 	return 0;

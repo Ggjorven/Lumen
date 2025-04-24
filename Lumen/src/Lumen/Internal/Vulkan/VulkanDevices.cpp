@@ -1,0 +1,448 @@
+#include "lupch.h"
+#include "VulkanDevices.hpp"
+
+#include "Lumen/Internal/IO/Print.hpp"
+#include "Lumen/Internal/Utils/Settings.hpp"
+
+#include "Lumen/Internal/Vulkan/VulkanContext.hpp"
+
+#include <tuple>
+#include <ranges>
+
+namespace
+{
+
+	////////////////////////////////////////////////////////////////////////////////////
+	// Requested Vulkan features
+	////////////////////////////////////////////////////////////////////////////////////
+    inline constexpr static VkPhysicalDeviceFeatures s_RequestedDeviceFeatures = {
+        .robustBufferAccess = VK_FALSE,
+        .fullDrawIndexUint32 = VK_FALSE,
+        .imageCubeArray = VK_FALSE,
+        .independentBlend = VK_FALSE,
+        .geometryShader = VK_FALSE,
+        .tessellationShader = VK_FALSE,
+        .sampleRateShading = VK_FALSE,
+        .dualSrcBlend = VK_FALSE,
+        .logicOp = VK_FALSE,
+        .multiDrawIndirect = VK_FALSE,
+        .drawIndirectFirstInstance = VK_FALSE,
+        .depthClamp = VK_FALSE,
+        .depthBiasClamp = VK_FALSE,
+        .fillModeNonSolid = VK_TRUE, // Needed
+        .depthBounds = VK_FALSE,
+        .wideLines = VK_FALSE, // Note: Disabled for compatibility reasons
+        .largePoints = VK_FALSE,
+        .alphaToOne = VK_FALSE,
+        .multiViewport = VK_FALSE,
+        .samplerAnisotropy = VK_TRUE, // Needed
+        .textureCompressionETC2 = VK_FALSE,
+        .textureCompressionASTC_LDR = VK_FALSE,
+        .textureCompressionBC = VK_FALSE,
+        .occlusionQueryPrecise = VK_FALSE,
+        .pipelineStatisticsQuery = VK_FALSE,
+        .vertexPipelineStoresAndAtomics = VK_FALSE,
+        .fragmentStoresAndAtomics = VK_FALSE,
+        .shaderTessellationAndGeometryPointSize = VK_FALSE,
+        .shaderImageGatherExtended = VK_FALSE,
+        .shaderStorageImageExtendedFormats = VK_FALSE,
+        .shaderStorageImageMultisample = VK_FALSE,
+        .shaderStorageImageReadWithoutFormat = VK_FALSE,
+        .shaderStorageImageWriteWithoutFormat = VK_FALSE,
+        .shaderUniformBufferArrayDynamicIndexing = VK_FALSE,
+        .shaderSampledImageArrayDynamicIndexing = VK_FALSE,
+        .shaderStorageBufferArrayDynamicIndexing = VK_FALSE,
+        .shaderStorageImageArrayDynamicIndexing = VK_FALSE,
+        .shaderClipDistance = VK_FALSE,
+        .shaderCullDistance = VK_FALSE,
+        .shaderFloat64 = VK_FALSE,
+        .shaderInt64 = VK_FALSE,
+        .shaderInt16 = VK_FALSE,
+        .shaderResourceResidency = VK_FALSE,
+        .shaderResourceMinLod = VK_FALSE,
+        .sparseBinding = VK_FALSE,
+        .sparseResidencyBuffer = VK_FALSE,
+        .sparseResidencyImage2D = VK_FALSE,
+        .sparseResidencyImage3D = VK_FALSE,
+        .sparseResidency2Samples = VK_FALSE,
+        .sparseResidency4Samples = VK_FALSE,
+        .sparseResidency8Samples = VK_FALSE,
+        .sparseResidency16Samples = VK_FALSE,
+        .sparseResidencyAliased = VK_FALSE,
+        .variableMultisampleRate = VK_FALSE,
+        .inheritedQueries = VK_FALSE
+    };
+
+    inline constexpr static VkPhysicalDeviceDescriptorIndexingFeatures s_RequestedDescriptorIndexingFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
+        .pNext = nullptr,
+
+        .shaderInputAttachmentArrayDynamicIndexing = VK_FALSE,
+        .shaderUniformTexelBufferArrayDynamicIndexing = VK_FALSE,
+        .shaderStorageTexelBufferArrayDynamicIndexing = VK_FALSE,
+        .shaderUniformBufferArrayNonUniformIndexing = VK_FALSE,
+        .shaderSampledImageArrayNonUniformIndexing = VK_FALSE,
+        .shaderStorageBufferArrayNonUniformIndexing = VK_FALSE,
+        .shaderStorageImageArrayNonUniformIndexing = VK_FALSE,
+        .shaderInputAttachmentArrayNonUniformIndexing = VK_FALSE,
+        .shaderUniformTexelBufferArrayNonUniformIndexing = VK_FALSE,
+        .shaderStorageTexelBufferArrayNonUniformIndexing = VK_FALSE,
+        .descriptorBindingUniformBufferUpdateAfterBind = VK_FALSE,
+        .descriptorBindingSampledImageUpdateAfterBind = VK_FALSE, // Needed for bindless
+        .descriptorBindingStorageImageUpdateAfterBind = VK_FALSE,
+        .descriptorBindingStorageBufferUpdateAfterBind = VK_FALSE,
+        .descriptorBindingUniformTexelBufferUpdateAfterBind = VK_FALSE,
+        .descriptorBindingStorageTexelBufferUpdateAfterBind = VK_FALSE,
+        .descriptorBindingUpdateUnusedWhilePending = VK_FALSE,
+        .descriptorBindingPartiallyBound = VK_FALSE, // Needed for bindless
+        .descriptorBindingVariableDescriptorCount = VK_FALSE, // Needed for bindless
+        .runtimeDescriptorArray = VK_FALSE, // Needed for bindless
+    };
+
+}
+
+namespace Lumen::Internal
+{
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    // Internal structs
+    ////////////////////////////////////////////////////////////////////////////////////
+    QueueFamilyIndices QueueFamilyIndices::Find(VkSurfaceKHR surface, VkPhysicalDevice device)
+	{
+		QueueFamilyIndices indices = {};
+
+        uint32_t queueFamilyCount;
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+		uint32_t i = 0;
+		for (const auto& queueFamily : queueFamilies)
+		{
+			// Early exit check
+			if (indices.IsComplete())
+				break;
+
+			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+				indices.GraphicsFamily = i;
+
+			if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
+				indices.ComputeFamily = i;
+
+			VkBool32 presentSupport = false;
+			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+			if (presentSupport)
+				indices.PresentFamily = i;
+
+			i++;
+		}
+
+		return indices;
+	}
+
+	SwapChainSupportDetails SwapChainSupportDetails::Query(VkSurfaceKHR surface, VkPhysicalDevice device)
+	{
+        SwapChainSupportDetails details = {};
+
+		// Capabilities
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.Capabilities);
+
+		// Formats
+		uint32_t formatCount;
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+
+		if (formatCount != 0)
+		{
+			details.Formats.resize(static_cast<size_t>(formatCount));
+			vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.Formats.data());
+		}
+
+		// Presentation modes
+		uint32_t presentModeCount;
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+
+		if (presentModeCount != 0)
+		{
+			details.PresentModes.resize(static_cast<size_t>(presentModeCount));
+			vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.PresentModes.data());
+		}
+
+		return details;
+	}
+
+    ////////////////////////////////////////////////////////////////////////////////////
+	// Constructor & Destructor
+    ////////////////////////////////////////////////////////////////////////////////////
+    VulkanPhysicalDevice::VulkanPhysicalDevice(VkSurfaceKHR surface)
+    {
+        VkInstance instance = VulkanContext::GetVkInstance();
+
+        uint32_t deviceCount;
+        vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+
+        LU_ASSERT((deviceCount != 0), "[VkPhysicalDevice] Failed to find a GPU with Vulkan support!");
+
+        std::vector<VkPhysicalDevice> devices(deviceCount);
+        vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+        for (const auto& device : devices) 
+		{
+            if (PhysicalDeviceSuitable(surface, device)) 
+			{
+                m_PhysicalDevice = device;
+                break;
+            }
+        }
+
+        LU_ASSERT(m_PhysicalDevice, "[VkPhysicalDevice] Failed to find a GPU with support for this application's required Vulkan capabilities!");
+    }
+
+	////////////////////////////////////////////////////////////////////////////////////
+	// Methods
+    ////////////////////////////////////////////////////////////////////////////////////
+    VkFormat VulkanPhysicalDevice::FindDepthFormat() const
+    {
+        return FindSupportedFormat(
+            { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT
+        );
+    }
+
+    VkFormat VulkanPhysicalDevice::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const
+    {
+        for (const auto& format : candidates) 
+        {
+            VkFormatProperties props;
+            vkGetPhysicalDeviceFormatProperties(m_PhysicalDevice, format, &props);
+
+            if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features)
+                return format;
+            else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features)
+                return format;
+        }
+
+        LU_LOG_ERROR("[VkPhysicalDevice] Failed to find supported format!");
+        return VK_FORMAT_UNDEFINED;
+    }
+
+	////////////////////////////////////////////////////////////////////////////////////
+    // Private methods
+	////////////////////////////////////////////////////////////////////////////////////
+	bool VulkanPhysicalDevice::PhysicalDeviceSuitable(VkSurfaceKHR surface, VkPhysicalDevice device)
+	{
+		QueueFamilyIndices indices = QueueFamilyIndices::Find(surface, device);
+
+		bool extensionsSupported = ExtensionsSupported(device);
+		bool swapChainAdequate = false;
+
+		if (extensionsSupported)
+		{
+			SwapChainSupportDetails swapChainSupport = SwapChainSupportDetails::Query(surface, device);
+			swapChainAdequate = !swapChainSupport.Formats.empty() && !swapChainSupport.PresentModes.empty();
+		}
+
+        VkPhysicalDeviceFeatures supportedFeatures = {};
+		vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+
+		// Index features
+        VkPhysicalDeviceDescriptorIndexingFeatures indexFeatures = {};
+		indexFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+		indexFeatures.pNext = nullptr;
+
+        VkPhysicalDeviceFeatures2 deviceFeatures = {};
+		deviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+		deviceFeatures.pNext = &indexFeatures;
+
+		vkGetPhysicalDeviceFeatures2(device, &deviceFeatures);
+
+		return indices.IsComplete() && extensionsSupported && swapChainAdequate && FeaturesSupported(s_RequestedDeviceFeatures, supportedFeatures) && FeaturesSupported(s_RequestedDescriptorIndexingFeatures, indexFeatures);
+	}
+
+	bool VulkanPhysicalDevice::ExtensionsSupported(VkPhysicalDevice device)
+	{
+		uint32_t extensionCount;
+		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+		std::set<std::string> requiredExtensions(VulkanContext::DeviceExtensions.begin(), VulkanContext::DeviceExtensions.end());
+
+		for (const auto& extension : availableExtensions)
+			requiredExtensions.erase(extension.extensionName);
+
+		// Note: It's empty if all the required extensions are available
+		return requiredExtensions.empty();
+	}
+
+	bool VulkanPhysicalDevice::FeaturesSupported(const VkPhysicalDeviceFeatures& requested, const VkPhysicalDeviceFeatures& found)
+    {
+        constexpr auto features = std::tuple{ 
+			&VkPhysicalDeviceFeatures::robustBufferAccess,
+            &VkPhysicalDeviceFeatures::fullDrawIndexUint32,
+            &VkPhysicalDeviceFeatures::imageCubeArray,
+            &VkPhysicalDeviceFeatures::independentBlend,
+            &VkPhysicalDeviceFeatures::geometryShader,
+            &VkPhysicalDeviceFeatures::tessellationShader,
+            &VkPhysicalDeviceFeatures::sampleRateShading,
+            &VkPhysicalDeviceFeatures::dualSrcBlend,
+            &VkPhysicalDeviceFeatures::logicOp,
+            &VkPhysicalDeviceFeatures::multiDrawIndirect,
+            &VkPhysicalDeviceFeatures::drawIndirectFirstInstance,
+            &VkPhysicalDeviceFeatures::depthClamp,
+            &VkPhysicalDeviceFeatures::depthBiasClamp,
+            &VkPhysicalDeviceFeatures::fillModeNonSolid,
+            &VkPhysicalDeviceFeatures::depthBounds,
+            &VkPhysicalDeviceFeatures::wideLines,
+            &VkPhysicalDeviceFeatures::largePoints,
+            &VkPhysicalDeviceFeatures::alphaToOne,
+            &VkPhysicalDeviceFeatures::multiViewport,
+            &VkPhysicalDeviceFeatures::samplerAnisotropy,
+            &VkPhysicalDeviceFeatures::textureCompressionETC2,
+            &VkPhysicalDeviceFeatures::textureCompressionASTC_LDR,
+            &VkPhysicalDeviceFeatures::textureCompressionBC,
+            &VkPhysicalDeviceFeatures::occlusionQueryPrecise,
+            &VkPhysicalDeviceFeatures::pipelineStatisticsQuery,
+            &VkPhysicalDeviceFeatures::vertexPipelineStoresAndAtomics,
+            &VkPhysicalDeviceFeatures::fragmentStoresAndAtomics,
+            &VkPhysicalDeviceFeatures::shaderTessellationAndGeometryPointSize,
+            &VkPhysicalDeviceFeatures::shaderImageGatherExtended,
+            &VkPhysicalDeviceFeatures::shaderStorageImageExtendedFormats,
+            &VkPhysicalDeviceFeatures::shaderStorageImageMultisample,
+            &VkPhysicalDeviceFeatures::shaderStorageImageReadWithoutFormat,
+            &VkPhysicalDeviceFeatures::shaderStorageImageWriteWithoutFormat,
+            &VkPhysicalDeviceFeatures::shaderUniformBufferArrayDynamicIndexing,
+            &VkPhysicalDeviceFeatures::shaderSampledImageArrayDynamicIndexing,
+            &VkPhysicalDeviceFeatures::shaderStorageBufferArrayDynamicIndexing,
+            &VkPhysicalDeviceFeatures::shaderStorageImageArrayDynamicIndexing,
+            &VkPhysicalDeviceFeatures::shaderClipDistance,
+            &VkPhysicalDeviceFeatures::shaderCullDistance,
+            &VkPhysicalDeviceFeatures::shaderFloat64,
+            &VkPhysicalDeviceFeatures::shaderInt64,
+            &VkPhysicalDeviceFeatures::shaderInt16,
+            &VkPhysicalDeviceFeatures::shaderResourceResidency,
+            &VkPhysicalDeviceFeatures::shaderResourceMinLod,
+            &VkPhysicalDeviceFeatures::sparseBinding,
+            &VkPhysicalDeviceFeatures::sparseResidencyBuffer,
+            &VkPhysicalDeviceFeatures::sparseResidencyImage2D,
+            &VkPhysicalDeviceFeatures::sparseResidencyImage3D,
+            &VkPhysicalDeviceFeatures::sparseResidency2Samples,
+            &VkPhysicalDeviceFeatures::sparseResidency4Samples,
+            &VkPhysicalDeviceFeatures::sparseResidency8Samples,
+            &VkPhysicalDeviceFeatures::sparseResidency16Samples,
+            &VkPhysicalDeviceFeatures::sparseResidencyAliased,
+            &VkPhysicalDeviceFeatures::variableMultisampleRate,
+            &VkPhysicalDeviceFeatures::inheritedQueries 
+		};
+
+        // Use std::apply to iterate over the tuple
+        bool failed = false;
+        std::apply([&](auto... featurePtr) { ((failed |= (requested.*featurePtr && !(found.*featurePtr))), ...); }, features);
+
+        return !failed;
+    }
+
+    bool VulkanPhysicalDevice::FeaturesSupported(const VkPhysicalDeviceDescriptorIndexingFeatures& requested, const VkPhysicalDeviceDescriptorIndexingFeatures& found)
+    {
+        constexpr auto features = std::tuple{
+            &VkPhysicalDeviceDescriptorIndexingFeatures::shaderInputAttachmentArrayDynamicIndexing,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::shaderUniformTexelBufferArrayDynamicIndexing,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::shaderStorageTexelBufferArrayDynamicIndexing,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::shaderUniformBufferArrayNonUniformIndexing,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::shaderSampledImageArrayNonUniformIndexing,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::shaderStorageBufferArrayNonUniformIndexing,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::shaderStorageImageArrayNonUniformIndexing,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::shaderInputAttachmentArrayNonUniformIndexing,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::shaderUniformTexelBufferArrayNonUniformIndexing,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::shaderStorageTexelBufferArrayNonUniformIndexing,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::descriptorBindingUniformBufferUpdateAfterBind,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::descriptorBindingSampledImageUpdateAfterBind,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::descriptorBindingStorageImageUpdateAfterBind,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::descriptorBindingStorageBufferUpdateAfterBind,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::descriptorBindingUniformTexelBufferUpdateAfterBind,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::descriptorBindingStorageTexelBufferUpdateAfterBind,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::descriptorBindingUpdateUnusedWhilePending,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::descriptorBindingPartiallyBound,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::descriptorBindingVariableDescriptorCount,
+            &VkPhysicalDeviceDescriptorIndexingFeatures::runtimeDescriptorArray,
+        };
+
+        // Use std::apply to iterate over the tuple
+        bool failed = false;
+        std::apply([&](auto... featurePtr) { ((failed |= (requested.*featurePtr && !(found.*featurePtr))), ...); }, features);
+
+        return !failed;
+    }
+
+	////////////////////////////////////////////////////////////////////////////////////
+	// Constructor & Destructor
+	////////////////////////////////////////////////////////////////////////////////////
+	VulkanDevice::VulkanDevice(VkSurfaceKHR surface, VulkanPhysicalDevice& physicalDevice)
+		: m_PhysicalDevice(physicalDevice)
+	{
+		QueueFamilyIndices indices = QueueFamilyIndices::Find(surface, m_PhysicalDevice.GetVkPhysicalDevice());
+
+		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+		std::set<uint32_t> uniqueQueueFamilies = { indices.GraphicsFamily.value(), indices.PresentFamily.value() };
+
+		float queuePriority = 1.0f;
+		for (uint32_t queueFamily : uniqueQueueFamilies)
+		{
+			VkDeviceQueueCreateInfo& queueCreateInfo = queueCreateInfos.emplace_back();
+			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			queueCreateInfo.queueFamilyIndex = queueFamily;
+			queueCreateInfo.queueCount = 1;
+			queueCreateInfo.pQueuePriorities = &queuePriority;
+		}
+
+		// Enable dynamic rendering features
+		VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature = {};
+		dynamicRenderingFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+		dynamicRenderingFeature.dynamicRendering = VK_TRUE;
+
+		VkPhysicalDeviceDescriptorIndexingFeaturesEXT indexingFeatures = s_RequestedDescriptorIndexingFeatures;
+		indexingFeatures.pNext = &dynamicRenderingFeature;
+
+		VkDeviceCreateInfo createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+		createInfo.pNext = &indexingFeatures; // Chain indexing & dynamic rendering
+		createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+		createInfo.pQueueCreateInfos = queueCreateInfos.data();
+		createInfo.pEnabledFeatures = &s_RequestedDeviceFeatures;
+		createInfo.enabledExtensionCount = static_cast<uint32_t>(VulkanContext::DeviceExtensions.size());
+		createInfo.ppEnabledExtensionNames = VulkanContext::DeviceExtensions.data();
+
+		if constexpr (VulkanContext::Validation)
+		{
+			createInfo.enabledLayerCount = static_cast<uint32_t>(VulkanContext::ValidationLayers.size());
+			createInfo.ppEnabledLayerNames = VulkanContext::ValidationLayers.data();
+		}
+		else
+		{
+			createInfo.enabledLayerCount = 0;
+		}
+
+		VK_VERIFY(vkCreateDevice(m_PhysicalDevice.GetVkPhysicalDevice(), &createInfo, nullptr, &m_LogicalDevice));
+
+		// Retrieve the graphics/compute/present queue handle
+		vkGetDeviceQueue(m_LogicalDevice, indices.GraphicsFamily.value(), 0, &m_GraphicsQueue);
+		vkGetDeviceQueue(m_LogicalDevice, indices.ComputeFamily.value(), 0, &m_ComputeQueue);
+		vkGetDeviceQueue(m_LogicalDevice, indices.PresentFamily.value(), 0, &m_PresentQueue);
+	}
+
+	VulkanDevice::~VulkanDevice()
+	{
+		vkDestroyDevice(m_LogicalDevice, nullptr);
+	}
+
+	////////////////////////////////////////////////////////////////////////////////////
+	// Methods
+	////////////////////////////////////////////////////////////////////////////////////
+	void VulkanDevice::Wait() const
+	{
+		vkDeviceWaitIdle(m_LogicalDevice);
+	}
+
+}

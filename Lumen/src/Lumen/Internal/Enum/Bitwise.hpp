@@ -1,66 +1,77 @@
 #pragma once
 
+#include "Lumen/Core/Core.hpp"
+#include "Lumen/Internal/Enum/Name.hpp"
+
 #include <cstdint>
 #include <type_traits>
 
-namespace Lumen::Internal::Enum
+namespace Lumen::Enum
 {
 
-    namespace EnumBitmask
+    ////////////////////////////////////////////////////////////////////////////////////
+    // Bitwise
+    ////////////////////////////////////////////////////////////////////////////////////
+    template<typename TEnum> requires(std::is_enum_v<TEnum>)
+    struct Customize
     {
-        template <typename Enum>
-        struct EnumWrapper
-        {
-        public:
-            constexpr explicit operator bool() const noexcept { return (e != Enum{ 0 }); }
+    public:
+		inline static constexpr bool Bitwise = false;
+    };
 
-            constexpr operator Enum() const noexcept { return e; }
+}
 
-        public:
-            Enum e;
-        };
+////////////////////////////////////////////////////////////////////////////////////
+// BitwiseEnum
+////////////////////////////////////////////////////////////////////////////////////
+template<typename TEnum>
+concept BitwiseEnum = std::is_enum_v<TEnum> && Lumen::Enum::Customize<TEnum>::Bitwise;
 
-        template <typename Enum>
-        EnumWrapper(Enum e) -> EnumWrapper<Enum>;
-    }
+////////////////////////////////////////////////////////////////////////////////////
+// Global bitwise functions
+////////////////////////////////////////////////////////////////////////////////////
+template<BitwiseEnum TEnum>
+constexpr auto operator & (TEnum lhs, TEnum rhs) noexcept
+{
+    using U = std::underlying_type_t<TEnum>;
+    return static_cast<TEnum>((static_cast<U>(lhs) & static_cast<U>(rhs)));
+}     
 
-    #define LU_ENABLE_BITWISE(e)                                                                                            \
-        static_assert(std::is_enum_v<e>, "e must be an enum type");                                                         \
-        [[nodiscard]]                                                                                                       \
-        inline constexpr auto operator&(e lhs, e rhs) noexcept                                                              \
-        {                                                                                                                   \
-            using U = std::underlying_type_t<e>;                                                                            \
-            return ::Lumen::Internal::Enum::EnumBitmask::EnumWrapper{ e(static_cast<U>(lhs) & static_cast<U>(rhs)) };       \
-        }                                                                                                                   \
-        [[nodiscard]]                                                                                                       \
-        inline constexpr auto operator|(e lhs, e rhs) noexcept                                                              \
-        {                                                                                                                   \
-            using U = std::underlying_type_t<e>;                                                                            \
-            return ::Lumen::Internal::Enum::EnumBitmask::EnumWrapper{ e(static_cast<U>(lhs) | static_cast<U>(rhs)) };       \
-        }                                                                                                                   \
-        [[nodiscard]]                                                                                                       \
-        inline constexpr auto operator^(e lhs, e rhs) noexcept                                                              \
-        {                                                                                                                   \
-            using U = std::underlying_type_t<e>;                                                                            \
-            return ::Lumen::Internal::Enum::EnumBitmask::EnumWrapper{ e(static_cast<U>(lhs) ^ static_cast<U>(rhs)) };       \
-        }                                                                                                                   \
-        [[nodiscard]]                                                                                                       \
-        inline constexpr e operator~(e value) noexcept                                                                      \
-        {                                                                                                                   \
-            using U = std::underlying_type_t<e>;                                                                            \
-            return e(~static_cast<U>(value));                                                                               \
-        }                                                                                                                   \
-        inline constexpr e& operator&=(e& lhs, e rhs) noexcept                                                              \
-        {                                                                                                                   \
-            return lhs = (lhs & rhs);                                                                                       \
-        }                                                                                                                   \
-        inline constexpr e& operator|=(e& lhs, e rhs) noexcept                                                              \
-        {                                                                                                                   \
-            return lhs = (lhs | rhs);                                                                                       \
-        }                                                                                                                   \
-        inline constexpr e& operator^=(e& lhs, e rhs) noexcept                                                              \
-        {                                                                                                                   \
-            return lhs = (lhs ^ rhs);                                                                                       \
-        }
+template<BitwiseEnum TEnum>
+constexpr auto operator | (TEnum lhs, TEnum rhs) noexcept
+{                                                                                                                   
+    using U = std::underlying_type_t<TEnum>;
+    return static_cast<TEnum>((static_cast<U>(lhs) | static_cast<U>(rhs)));
+}   
 
+template<BitwiseEnum TEnum>
+constexpr auto operator ^ (TEnum lhs, TEnum rhs) noexcept
+{                                                                                                                   
+    using U = std::underlying_type_t<TEnum>;
+    return static_cast<TEnum>((static_cast<U>(lhs) ^ static_cast<U>(rhs)));
+}  
+
+template<BitwiseEnum TEnum>
+constexpr TEnum operator ~ (TEnum value) noexcept
+{                                                                                                                   
+    using U = std::underlying_type_t<TEnum>;
+    return TEnum(~static_cast<U>(value));
+}  
+
+template<BitwiseEnum TEnum>
+constexpr TEnum& operator &= (TEnum& lhs, TEnum rhs) noexcept
+{                                                                                                                   
+    return lhs = (lhs & rhs);                                                                                       
+}  
+
+template<BitwiseEnum TEnum>
+constexpr TEnum& operator |= (TEnum& lhs, TEnum rhs) noexcept
+{                                                                                                                   
+    return lhs = (lhs | rhs);                                                                                       
+}
+
+template<BitwiseEnum TEnum>
+constexpr TEnum& operator ^= (TEnum& lhs, TEnum rhs) noexcept
+{                                                                                                                   
+    return lhs = (lhs ^ rhs);                                                                                       
 }

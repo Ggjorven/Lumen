@@ -27,6 +27,13 @@ namespace Lumen::Internal::Info
 		// iOS,
 	};
 
+	enum class Configuration : uint8_t
+	{
+		Debug = 0,
+		Release,
+		Dist
+	};
+
 	enum class CppStd : uint8_t
 	{
 		Cpp11 = LU_CPPSTD_11,
@@ -58,6 +65,16 @@ namespace Lumen::Internal::Info
 		inline constexpr const Platform g_Platform = Platform::MacOS;
 	#else 
 		#error Lumen Settings: Unsupported platform.
+	#endif
+
+	#if defined(LU_CONFIG_DEBUG)
+		inline constexpr const Configuration g_Configuration = Configuration::Debug;
+	#elif defined(LU_CONFIG_RELEASE)
+		inline constexpr const Configuration g_Configuration = Configuration::Release;
+	#elif defined(LU_CONFIG_DIST)
+		inline constexpr const Configuration g_Configuration = Configuration::Dist;
+	#else
+		#error Lumen Settings: Unsupported configuration.
 	#endif
 
 	inline constexpr const CppStd g_CppStd = static_cast<CppStd>(LU_CPPSTD);

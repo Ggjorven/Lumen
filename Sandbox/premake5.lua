@@ -124,10 +124,20 @@ project "Sandbox"
 		runtime "Debug"
 		symbols "on"
 
+		defines
+		{
+			"TRACY_ENABLE"
+		}
+
 	filter "configurations:Release"
 		defines "LU_CONFIG_RELEASE"
 		runtime "Release"
 		optimize "on"
+
+		defines
+		{
+			"TRACY_ENABLE"
+		}
 
 	filter "configurations:Dist"
 		kind "WindowedApp"

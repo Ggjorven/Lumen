@@ -6,8 +6,8 @@
 
 #include <tracy/Tracy.hpp>
 
-#include <new>
 #include <cstdlib>
+#include <new>
 
 // Note: For future profiling 
 namespace Lumen::Internal

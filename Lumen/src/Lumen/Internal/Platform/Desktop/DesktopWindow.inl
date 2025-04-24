@@ -4,16 +4,16 @@ namespace Lumen::Internal
     ////////////////////////////////////////////////////////////////////////////////////
     // Methods
     ////////////////////////////////////////////////////////////////////////////////////
-    forceinline void DesktopWindow::PollEvents()
+    hintinline void DesktopWindow::PollEvents()
     {
-        //LU_MARK_FRAME();
-        //LU_PROFILE("DesktopWindow::PollEvents()");
+        LU_MARK_FRAME();
+        LU_PROFILE("DesktopWindow::PollEvents()");
         glfwPollEvents();
     }
 
-    forceinline void DesktopWindow::SwapBuffers()
+    hintinline void DesktopWindow::SwapBuffers()
     {
-        //LU_PROFILE("DesktopWindow::SwapBuffers()");
+        LU_PROFILE("DesktopWindow::SwapBuffers()");
         //m_Renderer.FreeQueue();
     }
 

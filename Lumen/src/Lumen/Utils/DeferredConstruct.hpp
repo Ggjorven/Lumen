@@ -5,6 +5,7 @@
 #include "Lumen/Internal/Utils/Settings.hpp"
 
 #include <cstdint>
+#include <ranges>
 #include <type_traits>
 
 namespace Lumen
@@ -13,7 +14,7 @@ namespace Lumen
 	////////////////////////////////////////////////////////////////////////////////////
 	// DeferredConstruct<T>
 	////////////////////////////////////////////////////////////////////////////////////
-	template<typename T>
+	template<typename T, bool destroyable = false>
 	class DeferredConstruct
 	{
 	public:
@@ -42,6 +43,8 @@ namespace Lumen
 		// Methods
 		template<typename ...Args>
 		void Construct(Args&& ...args);
+
+		void Destroy() requires(destroyable);
 
 	private:
 		// Debug method
