@@ -442,7 +442,7 @@ namespace Lumen::Internal
 	////////////////////////////////////////////////////////////////////////////////////
 	void VulkanDevice::Wait() const
 	{
-		vkDeviceWaitIdle(m_LogicalDevice);
+        VK_VERIFY(vkDeviceWaitIdle(m_LogicalDevice));
 	}
 
 }

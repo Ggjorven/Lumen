@@ -5,13 +5,13 @@
 #include "Lumen/Internal/IO/Print.hpp"
 #include "Lumen/Internal/Utils/Settings.hpp"
 
-#include "Lumen/Utils/DeferredConstruct.hpp"
+#include "Lumen/Internal/Memory/DeferredConstruct.hpp"
 
 using namespace Lumen;
 
 int Main(int argc, char* argv[])
 {
-	DeferredConstruct<Internal::Window> window;
+	Internal::DeferredConstruct<Internal::Window> window;
 	window.Construct(Internal::WindowSpecification({
 		.Title = "Lumen", 
 

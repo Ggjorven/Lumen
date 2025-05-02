@@ -182,7 +182,7 @@ namespace Lumen::Internal
         #define LU_ASSERT(x, msg)       \
             do                          \
             {                           \
-                if (!x)                 \
+                if (!(x))               \
                 {                       \
                     LU_LOG_FATAL("Assertion failed: ({0}), {1}.", #x, msg); \
                     LU_DEBUG_BREAK();   \
@@ -192,7 +192,7 @@ namespace Lumen::Internal
         #define LU_VERIFY(x, msg)       \
             do                          \
             {                           \
-                if (!x)                 \
+                if (!(x))               \
                 {                       \
                     LU_LOG_FATAL("Verify failed: ({0}), {1}.", #x, msg); \
                 }                       \

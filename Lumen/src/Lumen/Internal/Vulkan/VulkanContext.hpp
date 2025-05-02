@@ -2,11 +2,12 @@
 
 #include "Lumen/Internal/Utils/Settings.hpp"
 
+#include "Lumen/Internal/Memory/DeferredConstruct.hpp"
+
 #include "Lumen/Internal/Vulkan/Vulkan.hpp"
 #include "Lumen/Internal/Vulkan/VulkanDevices.hpp"
 
 #include "Lumen/Core/Core.hpp"
-#include "Lumen/Utils/DeferredConstruct.hpp"
 
 #include <array>
 

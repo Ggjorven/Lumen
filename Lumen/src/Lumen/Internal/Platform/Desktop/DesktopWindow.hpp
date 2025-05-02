@@ -3,8 +3,10 @@
 #include "Lumen/Internal/Utils/Profiler.hpp"
 #include "Lumen/Internal/Utils/Preprocessor.hpp"
 
+#include "Lumen/Internal/Memory/DeferredConstruct.hpp"
+
 #include "Lumen/Internal/Core/WindowSpec.hpp"
-//#include "Lumen/Internal/Renderer/Renderer.hpp"
+#include "Lumen/Internal/Renderer/Renderer.hpp"
 
 #include "Lumen/Core/Core.hpp"
 
@@ -54,7 +56,7 @@ namespace Lumen::Internal
 
 		inline void* GetNativeWindow() { return static_cast<void*>(m_Window); }
 		inline WindowSpecification& GetSpecification() { return m_Specification; }
-		//inline Renderer& GetRenderer() { return m_Renderer; }
+		inline Renderer& GetRenderer() { return m_Renderer.Get(); }
 
 	private:
 		WindowSpecification m_Specification;
@@ -63,7 +65,7 @@ namespace Lumen::Internal
 		
 		bool m_Closed = false;
 		
-		//Renderer m_Renderer = {};
+		DeferredConstruct<Renderer, true> m_Renderer = {};
 	};
 #endif
 

@@ -8,7 +8,7 @@
 #include <ranges>
 #include <type_traits>
 
-namespace Lumen
+namespace Lumen::Internal
 {
 
 	////////////////////////////////////////////////////////////////////////////////////
@@ -66,4 +66,4 @@ namespace Lumen
 
 }
 
-#include "Lumen/Utils/DeferredConstruct.inl"
+#include "Lumen/Internal/Memory/DeferredConstruct.inl"

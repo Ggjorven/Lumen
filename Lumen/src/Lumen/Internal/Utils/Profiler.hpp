@@ -15,7 +15,7 @@ namespace Lumen::Internal
 
 	// Settings
 	// Note: Profiling leaks memory (on windows), so don't keep on during any tests, since it will skew results.
-	#define LU_ENABLE_PROFILING 0
+	#define LU_ENABLE_PROFILING 1
 	#define LU_MEM_PROFILING 0
 
 	// Function name

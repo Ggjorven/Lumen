@@ -5,7 +5,6 @@
 #include "Lumen/Internal/Utils/Settings.hpp"
 
 #include "Lumen/Internal/Renderer/GraphicsContext.hpp"
-//#include "Lumen/Internal/Vulkan/VulkanAllocator.hpp"
 
 #if defined(LU_PLATFORM_DESKTOP)
     #define GLFW_INCLUDE_VULKAN

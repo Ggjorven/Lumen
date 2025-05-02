@@ -60,7 +60,7 @@ namespace Lumen::Internal
 
 		forceinline void* GetNativeWindow() { return m_Window.GetNativeWindow(); }
 		forceinline WindowSpecification& GetSpecification() { return m_Window.GetSpecification(); }
-		//forceinline Renderer& GetRenderer() { return m_Window.GetRenderer(); }
+		forceinline Renderer& GetRenderer() { return m_Window.GetRenderer(); }
 
 	private:
 		WindowType m_Window;

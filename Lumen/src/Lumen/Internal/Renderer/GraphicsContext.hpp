@@ -3,10 +3,11 @@
 #include "Lumen/Internal/IO/Print.hpp"
 #include "Lumen/Internal/Utils/Settings.hpp"
 
+#include "Lumen/Internal/Memory/DeferredConstruct.hpp"
+
 #include "Lumen/Internal/Vulkan/VulkanContext.hpp"
 
 #include "Lumen/Core/Core.hpp"
-#include "Lumen/Utils/DeferredConstruct.hpp"
 
 #include <cstdint>
 
@@ -38,7 +39,7 @@ namespace Lumen::Internal
 	private:
 		inline static void* s_ActiveWindow = nullptr;
 		inline static bool s_Initialized = false;
-		inline static GraphicsContext::Type s_GraphicsContext = {};
+		inline static Type s_GraphicsContext = {};
 	};
 
 }

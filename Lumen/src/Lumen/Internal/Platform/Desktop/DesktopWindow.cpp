@@ -140,23 +140,22 @@ namespace Lumen::Internal
                 data.EventCallback(event);
             });
 
-        //m_Renderer.Init({
-        //    .WindowRef = instance,
-        //
-        //    .Width = m_Specification.Width,
-        //    .Height = m_Specification.Height,
-        //
-        //    .Buffers = m_Specification.Buffers,
-        //    .VSync = m_Specification.VSync,
-        //});
-        //m_Renderer.Recreate(m_Specification.Width, m_Specification.Height, m_Specification.VSync);
+        m_Renderer.Construct(RendererSpecification({
+            .WindowRef = instance,
+        
+            .Width = m_Specification.Width,
+            .Height = m_Specification.Height,
+        
+            .VSync = m_Specification.VSync,
+        }));
+        m_Renderer->Recreate(m_Specification.Width, m_Specification.Height, m_Specification.VSync);
     }
 
     DesktopWindow::~DesktopWindow()
     {
         m_Closed = true;
 
-        //m_Renderer.Destroy();
+        m_Renderer.Destroy();
 
         bool destroy = (--s_GLFWInstances == 0);
         if (destroy)
