@@ -1,39 +1,46 @@
 #pragma once
 
-#include <string>
-
 #include "Lumen/Internal/Utils/Preprocessor.hpp"
+
+#include "Lumen/Core/Core.hpp"
 
 #include <tracy/Tracy.hpp>
 
+// Note: Internal header, may break in future versions.
+#include <tracy/../client/TracyProfiler.hpp>
+
 #include <cstdlib>
+#include <string>
 #include <new>
 
-// Note: For future profiling 
 namespace Lumen::Internal
 {
 
+	////////////////////////////////////////////////////////////////////////////////////
+	// Profiler
+	////////////////////////////////////////////////////////////////////////////////////
+	class Profiler // Note: The startup is asynchronous
+	{
+	public:
+		// Utils
+		hintinline static void Wait(uint32_t pollRateMs = 10, uint32_t initWaitMs = 400) // Note: Waits for profiler to attach and initialize
+		{
+			auto& profiler = tracy::GetProfiler();
+
+			// Wait until the worker thread is running and ready
+			while (!profiler.IsConnected())
+				std::this_thread::sleep_for(std::chrono::milliseconds(pollRateMs));
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(initWaitMs));
+		}
+	};
+
+	////////////////////////////////////////////////////////////////////////////////////
+	// Macros
+	////////////////////////////////////////////////////////////////////////////////////
 	// Settings
-	// Note: Profiling leaks memory (on windows), so don't keep on during any tests, since it will skew results.
-	#define LU_ENABLE_PROFILING 1
+	#define LU_ENABLE_PROFILING 0
 	#define LU_MEM_PROFILING 0
-
-	// Function name
-	#if defined(LU_COMPILER_MSVC)
-		#define LU_PRETTY_FUNCTION __FUNCSIG__
-	#elif defined(LU_COMPILER_GCC) || defined(LU_COMPILER_CLANG)
-		#define LU_PRETTY_FUNCTION __PRETTY_FUNCTION__
-	#else 
-		#define LU_PRETTY_FUNCTION __func__ 
-	#endif
-
-	// Function naming (if count = 1, class was passed in) // TODO: Fix the __VA_ARGS__ expansion since it always says a class is passed in because of ','
-	#define LU_FUNC_NAME(...) LU_FUNC_NAME_IMPL(__VA_ARGS__)
-
-	#define LU_FUNC_NAME_IMPL(...) LU_EXPAND_MACRO_COUNT(LU_EXPAND_FUNC_NAME_, LU_NUMBER_OF_ARGS(__VA_ARGS__), __VA_ARGS__)
-
-	#define LU_EXPAND_FUNC_NAME_0(fn) fn
-	#define LU_EXPAND_FUNC_NAME_1(fn, cls) cls + "::" + std::string(__func__)
 
 	// Profiling macros
 	#if !defined(LU_CONFIG_DIST) && LU_ENABLE_PROFILING
@@ -41,9 +48,7 @@ namespace Lumen::Internal
 		
 		#define LU_PROFILE(name) ZoneScopedN(name)
 		
-		// Note: Optional class argument
-		// TODO: Function scope naming
-		#define LU_PROFILE_SCOPE(...) ZoneScopedN("TODO")
+		#define LU_PROFILER_WAIT_INIT() ::Lumen::Internal::Profiler::Wait()
 
 		#if LU_MEM_PROFILING
 			void* operator new(size_t size);
@@ -55,8 +60,7 @@ namespace Lumen::Internal
 
 		#define LU_PROFILE(name)
 
-		// Note: Optional class argument
-		#define LU_PROFILE_SCOPE(...)
+		#define LU_PROFILER_WAIT_INIT()
 	#endif
 
 }

@@ -109,34 +109,54 @@ namespace Lumen::Internal
     ////////////////////////////////////////////////////////////////////////////////////
     QueueFamilyIndices QueueFamilyIndices::Find(VkSurfaceKHR surface, VkPhysicalDevice device)
 	{
-		QueueFamilyIndices indices = {};
-
         uint32_t queueFamilyCount;
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
 		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
-		uint32_t i = 0;
-		for (const auto& queueFamily : queueFamilies)
+        QueueFamilyIndices indices = {};
+        indices.Queues.resize(queueFamilyCount);
+
+        // Create into readable format
+		for (uint32_t i = 0; i < queueFamilyCount; i++)
 		{
-			// Early exit check
-			if (indices.IsComplete())
-				break;
-
-			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-				indices.GraphicsFamily = i;
-
-			if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
-				indices.ComputeFamily = i;
+            auto& queueFamily = queueFamilies[i];
+            QueueFamilyInfo& info = indices.Queues[i];
+            info.Index = i;
+            info.Count = queueFamily.queueCount;
+            info.Flags = static_cast<QueueFamilyFlags>(queueFamily.queueFlags);
 
 			VkBool32 presentSupport = false;
 			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
-			if (presentSupport)
-				indices.PresentFamily = i;
-
-			i++;
+            if (presentSupport)
+                info.Flags |= QueueFamilyFlags::Present;
 		}
+
+        // Make choices
+        for (const auto& queue : indices.Queues) // Note: We want all queues to be from the same queue family to avoid messy synchronization
+        {
+            if (queue.SupportsRequired())
+            {
+                if (queue.EnoughQueues())
+                {
+                    indices.GraphicsQueue = 0;
+                    indices.PresentQueue = 1;
+                    indices.ComputeQueue = 2;
+                }
+                else
+                {
+                    indices.GraphicsQueue = 0;
+                    indices.PresentQueue = indices.GraphicsQueue;
+                    indices.ComputeQueue = indices.GraphicsQueue;
+                }
+
+                indices.QueueFamily = queue.Index;
+                indices.CompletedQueues = true;
+            }
+        }
+
+        LU_ASSERT(indices.CompletedQueues, "[VkDevice] Failed to query queues. Contact developer.");
 
 		return indices;
 	}
@@ -384,32 +404,28 @@ namespace Lumen::Internal
 	{
 		QueueFamilyIndices indices = QueueFamilyIndices::Find(surface, m_PhysicalDevice.GetVkPhysicalDevice());
 
-		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-		std::set<uint32_t> uniqueQueueFamilies = { indices.GraphicsFamily.value(), indices.PresentFamily.value() };
+        uint32_t queueCount = (indices.SameQueue() ? 1 : 3);
+        std::vector<float> queuePriorities(queueCount, 1.0f);
 
-		float queuePriority = 1.0f;
-		for (uint32_t queueFamily : uniqueQueueFamilies)
-		{
-			VkDeviceQueueCreateInfo& queueCreateInfo = queueCreateInfos.emplace_back();
-			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			queueCreateInfo.queueFamilyIndex = queueFamily;
-			queueCreateInfo.queueCount = 1;
-			queueCreateInfo.pQueuePriorities = &queuePriority;
-		}
+        VkDeviceQueueCreateInfo queueCreateInfo = {};
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = indices.QueueFamily;
+		queueCreateInfo.queueCount = queueCount;
+		queueCreateInfo.pQueuePriorities = queuePriorities.data();
 
-		// Enable dynamic rendering features
-		VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature = {};
-		dynamicRenderingFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
-		dynamicRenderingFeature.dynamicRendering = VK_TRUE;
-
+		// Enable dynamic rendering features // Note: Dynamic rendering & bindless is currently disabled
+		// VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature = {};
+		// dynamicRenderingFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+		// dynamicRenderingFeature.dynamicRendering = VK_TRUE;
+        
 		VkPhysicalDeviceDescriptorIndexingFeaturesEXT indexingFeatures = s_RequestedDescriptorIndexingFeatures;
-		indexingFeatures.pNext = &dynamicRenderingFeature;
+        indexingFeatures.pNext = nullptr; //&dynamicRenderingFeature;
 
 		VkDeviceCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-		createInfo.pNext = &indexingFeatures; // Chain indexing & dynamic rendering
-		createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-		createInfo.pQueueCreateInfos = queueCreateInfos.data();
+        createInfo.pNext = &indexingFeatures; // Chain indexing
+		createInfo.queueCreateInfoCount = 1;
+		createInfo.pQueueCreateInfos = &queueCreateInfo;
 		createInfo.pEnabledFeatures = &s_RequestedDeviceFeatures;
 		createInfo.enabledExtensionCount = static_cast<uint32_t>(VulkanContext::DeviceExtensions.size());
 		createInfo.ppEnabledExtensionNames = VulkanContext::DeviceExtensions.data();
@@ -427,9 +443,21 @@ namespace Lumen::Internal
 		VK_VERIFY(vkCreateDevice(m_PhysicalDevice.GetVkPhysicalDevice(), &createInfo, nullptr, &m_LogicalDevice));
 
 		// Retrieve the graphics/compute/present queue handle
-		vkGetDeviceQueue(m_LogicalDevice, indices.GraphicsFamily.value(), 0, &m_GraphicsQueue);
-		vkGetDeviceQueue(m_LogicalDevice, indices.ComputeFamily.value(), 0, &m_ComputeQueue);
-		vkGetDeviceQueue(m_LogicalDevice, indices.PresentFamily.value(), 0, &m_PresentQueue);
+        {
+            VkDeviceQueueInfo2 queueInfo = {};
+            queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2;
+            queueInfo.queueFamilyIndex = indices.QueueFamily;
+            queueInfo.flags = 0; // Note: Should always be 0
+
+            queueInfo.queueIndex = indices.GraphicsQueue;
+            vkGetDeviceQueue2(m_LogicalDevice, &queueInfo, &m_GraphicsQueue);
+
+            queueInfo.queueIndex = indices.ComputeQueue;
+            vkGetDeviceQueue2(m_LogicalDevice, &queueInfo, &m_ComputeQueue);
+
+            queueInfo.queueIndex = indices.PresentQueue;
+            vkGetDeviceQueue2(m_LogicalDevice, &queueInfo, &m_PresentQueue);
+        }
 	}
 
 	VulkanDevice::~VulkanDevice()

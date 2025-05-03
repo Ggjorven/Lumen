@@ -2,6 +2,10 @@
 
 #include "Lumen/Internal/Vulkan/Vulkan.hpp"
 
+#include "Lumen/Internal/Enum/Bitwise.hpp"
+
+#include "Lumen/Core/Core.hpp"
+
 #include <cstdint>
 #include <optional>
 
@@ -11,16 +15,55 @@ namespace Lumen::Internal
     ////////////////////////////////////////////////////////////////////////////////////
     // Internal structs
     ////////////////////////////////////////////////////////////////////////////////////
+    enum class QueueFamilyFlags : uint16_t
+    {
+        None = 0, 
+        Graphics = 1 << 0,
+        Compute = 1 << 1,
+        Transfer = 1 << 2,
+        SparseBinding = 1 << 3,
+        Protected = 1 << 4,
+        VideoDecodeKHR = 1 << 5,
+        VideoEncodeKHR = 1 << 6,
+        OpticalFlowNV = 1 << 7,
+
+        Present = 1 << 8
+    };
+
+    struct QueueFamilyInfo
+    {
+    public:
+        uint32_t Index = 0;
+        uint32_t Count = 0;
+
+        QueueFamilyFlags Flags = QueueFamilyFlags::None;
+
+    public:
+        // Methods
+        bool SupportsRequired() const; // Note: Checks for Graphics, Compute & Present
+        bool EnoughQueues() const; // Note: Just checks if Count >= 3 (Graphics + Compute + Present)
+    };
+
     struct QueueFamilyIndices
     {
     public:
-        std::optional<uint32_t> GraphicsFamily;
-        std::optional<uint32_t> ComputeFamily;
-        std::optional<uint32_t> PresentFamily;
+        uint32_t QueueFamily = 0;
+
+        uint32_t GraphicsQueue = 0;
+        uint32_t ComputeQueue = 0;
+        uint32_t PresentQueue = 0;
+
+        std::vector<QueueFamilyInfo> Queues = {};
+
+        bool CompletedQueues = false;
 
     public:
-        static QueueFamilyIndices Find(VkSurfaceKHR surface, VkPhysicalDevice device);
-        inline bool IsComplete() const { return GraphicsFamily.has_value() && ComputeFamily.has_value() && PresentFamily.has_value(); }
+        // Methods
+        forceinline bool IsComplete() const { return CompletedQueues; }
+        bool SameQueue() const;
+
+    public:
+        static QueueFamilyIndices Find(VkSurfaceKHR surface, VkPhysicalDevice device); 
     };
 
     struct SwapChainSupportDetails
@@ -95,3 +138,12 @@ namespace Lumen::Internal
     };
 
 }
+
+template<>
+struct Lumen::Enum::Customize<Lumen::Internal::QueueFamilyFlags>
+{
+public:
+    inline static constexpr bool Bitwise = true;
+};
+
+#include "Lumen/Internal/Vulkan/VulkanDevices.inl"
