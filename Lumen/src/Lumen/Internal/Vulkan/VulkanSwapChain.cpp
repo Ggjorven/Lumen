@@ -32,6 +32,7 @@ namespace Lumen::Internal
 		for (size_t i = 0; i < RendererSpecification::FramesInFlight; i++)
 		{
 			VK_VERIFY(vkCreateSemaphore(VulkanContext::GetVulkanDevice().GetVkDevice(), &semaphoreInfo, nullptr, &m_ImageAvailableSemaphores[i]));
+			VK_VERIFY(vkCreateSemaphore(VulkanContext::GetVulkanDevice().GetVkDevice(), &semaphoreInfo, nullptr, &m_RenderFinishedSemaphores[i]));
 		}
 	}
 

@@ -39,6 +39,7 @@ namespace Lumen::Internal
 
 		// Getter
 		forceinline T& Get() { CheckConstructed(); return *reinterpret_cast<T*>(m_Storage); }
+		forceinline const T& Get() const { CheckConstructed(); return *reinterpret_cast<const T*>(m_Storage); }
 
 		// Methods
 		template<typename ...Args>

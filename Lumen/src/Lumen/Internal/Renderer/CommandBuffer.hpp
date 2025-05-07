@@ -8,28 +8,6 @@ namespace Lumen::Internal
 {
 
     ////////////////////////////////////////////////////////////////////////////////////
-    // CommandView
-    ////////////////////////////////////////////////////////////////////////////////////
-    class CommandView
-    {
-    public:
-        using Type = VulkanCommandView;
-    public:
-        // Constructor & Destructor
-        forceinline CommandView(const VulkanCommandBuffer& commandBuffer)
-            : m_CommandView(commandBuffer) {}
-        forceinline CommandView(const VulkanRenderCommandBuffer& commandBuffer)
-            : m_CommandView(commandBuffer) {}
-        ~CommandView() = default;
-
-        // Internal
-        forceinline const Type& GetInternalCommandView() const { return m_CommandView; }
-
-    private:
-        Type m_CommandView;
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////
     // CommandBuffer
     ////////////////////////////////////////////////////////////////////////////////////
     class CommandBuffer
@@ -43,12 +21,9 @@ namespace Lumen::Internal
 
         // The Begin, End & Submit methods are in the Renderer class.
 
-        // Getters
-        forceinline CommandView GetView() const { return { m_CommandBuffer }; }
-        forceinline operator CommandView() const { return GetView(); }
-
         // Internal
         forceinline Type& GetInternalCommandBuffer() { return m_CommandBuffer; }
+        forceinline const Type& GetInternalCommandBuffer() const { return m_CommandBuffer; }
 
     private:
         Type m_CommandBuffer = {};
@@ -69,8 +44,8 @@ namespace Lumen::Internal
         // The Begin, End & Submit methods are in the Renderer class.
 
         // Getters
-        forceinline CommandView GetView() const { return { m_CommandBuffer }; }
-        forceinline operator CommandView() const { return GetView(); }
+        forceinline CommandBuffer& GetCommandBuffer() { return *reinterpret_cast<CommandBuffer*>(&m_CommandBuffer.GetCommandBuffer()); }
+        forceinline CommandBuffer& GetCommandBuffer(uint32_t index) { return *reinterpret_cast<CommandBuffer*>(&m_CommandBuffer.GetCommandBuffer(index)); }
 
         // Internal
         forceinline Type& GetInternalRenderCommandBuffer() { return m_CommandBuffer; }

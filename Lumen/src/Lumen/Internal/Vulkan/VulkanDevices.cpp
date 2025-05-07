@@ -172,21 +172,17 @@ namespace Lumen::Internal
 		uint32_t formatCount;
 		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
 
-		if (formatCount != 0)
-		{
-			details.Formats.resize(static_cast<size_t>(formatCount));
-			vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.Formats.data());
-		}
+        LU_ASSERT((formatCount != 0), "[VkPhysicalDevice] GPU doesn't support any formats?");
+		details.Formats.resize(static_cast<size_t>(formatCount));
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.Formats.data());
 
 		// Presentation modes
 		uint32_t presentModeCount;
 		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
 
-		if (presentModeCount != 0)
-		{
-			details.PresentModes.resize(static_cast<size_t>(presentModeCount));
-			vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.PresentModes.data());
-		}
+        LU_ASSERT((formatCount != 0), "[VkPhysicalDevice] GPU doesn't support any presentmodes?");
+		details.PresentModes.resize(static_cast<size_t>(presentModeCount));
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.PresentModes.data());
 
 		return details;
 	}

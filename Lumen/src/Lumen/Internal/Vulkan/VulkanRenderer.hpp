@@ -4,14 +4,15 @@
 //#include "Lumen/Internal/Renderer/Buffers.hpp"
 //#include "Lumen/Internal/Renderer/Pipeline.hpp"
 //#include "Lumen/Internal/Renderer/Renderpass.hpp"
-//#include "Lumen/Internal/Renderer/CommandBuffer.hpp"
+#include "Lumen/Internal/Renderer/CommandBuffer.hpp"
 
 #include "Lumen/Internal/Vulkan/Vulkan.hpp"
 
 #include "Lumen/Internal/Vulkan/VulkanBuffers.hpp"
 
 //#include "Lumen/Internal/Vulkan/VulkanSwapChain.hpp"
-//#include "Lumen/Internal/Vulkan/VulkanTaskManager.hpp"
+#include "Lumen/Internal/Vulkan/VulkanSynchronizer.hpp"
+#include "Lumen/Internal/Vulkan/VulkanGarbageCollector.hpp"
 
 #include <cstdint>
 #include <queue>
@@ -31,9 +32,9 @@ namespace Lumen::Internal
         ~VulkanRenderer();
 
         // Methods
-        //void BeginFrame();
-        //void EndFrame();
-        //void Present();
+        void BeginFrame();
+        void EndFrame();
+        void Present();
 
         // Object methods
         //void Begin(CommandBuffer& cmdBuf);
@@ -50,10 +51,11 @@ namespace Lumen::Internal
         //void DrawIndexed(CommandBuffer& cmdBuf, uint32_t indexCount, uint32_t instanceCount);
         //void DrawIndexed(CommandBuffer& cmdBuf, IndexBuffer& indexBuffer, uint32_t instanceCount);
 
-        // Internal
-        void Free(const FreeFn& fn);
-        void FreeQueue();
+        // Frame
+        forceinline void BakeFrameGraph(const FrameGraph& frame, uint8_t frameIndex) { m_Synchronizer.BakeFrameGraph(frame, frameIndex); }
+        forceinline void BakeCurrentFrameGraph(const FrameGraph& frame) { m_Synchronizer.BakeCurrentFrameGraph(frame); }
 
+        // Internal
         void Recreate(uint32_t width, uint32_t height, bool vsync);
 
         // Getters
@@ -64,9 +66,11 @@ namespace Lumen::Internal
         //std::vector<Image*> GetSwapChainImages();
 
         // Internal getters
-        //inline VulkanTaskManager& GetTaskManager() { return m_TaskManager; }
+        forceinline VulkanGarbageCollector& GetGarbageCollector() { return m_GarbageCollector; }
+        forceinline VulkanSynchronizer& GetSynchronizer() { return m_Synchronizer; }
         //inline VulkanSwapChain& GetVulkanSwapChain() { return m_SwapChain; }
         forceinline VulkanStagingBufferRegistry& GetStagingBuffers() { return m_StagingBuffers; }
+
         forceinline VkCommandPool GetVkCommandPool() const { return m_CommandPool; }
 
         // Static methods
@@ -80,11 +84,9 @@ namespace Lumen::Internal
         void InitCommandPool(VkSurfaceKHR surface);
 
     private:
-        std::mutex m_FreeMutex = {};
-        std::queue<FreeFn> m_FreeQueue = {};
-
         //VulkanSwapChain m_SwapChain = {};
-        //VulkanTaskManager m_TaskManager = {};
+        VulkanGarbageCollector m_GarbageCollector = {};
+        VulkanSynchronizer m_Synchronizer = {};
 
         RendererSpecification m_Specification;
         

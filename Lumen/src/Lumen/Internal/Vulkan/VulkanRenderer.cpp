@@ -43,37 +43,32 @@ namespace Lumen::Internal
 
 		vkDestroyCommandPool(device.GetVkDevice(), m_CommandPool, nullptr);
 
-		FreeQueue();
+		m_GarbageCollector.Dispose();
 		//m_SwapChain.Destroy();
-		//m_TaskManager.Destroy();
-		FreeQueue();
+		m_GarbageCollector.Dispose();
 
 		s_Renderer = nullptr;
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
+	// Methods
+	////////////////////////////////////////////////////////////////////////////////////
+	void VulkanRenderer::BeginFrame()
+	{
+		m_GarbageCollector.Dispose();
+	}
+
+	void VulkanRenderer::EndFrame()
+	{
+	}
+
+	void VulkanRenderer::Present()
+	{
+	}
+
+	////////////////////////////////////////////////////////////////////////////////////
 	// Internal
 	////////////////////////////////////////////////////////////////////////////////////
-	void VulkanRenderer::Free(const FreeFn& fn)
-	{
-		LU_PROFILE("VkRenderer::Free()");
-
-		std::scoped_lock<std::mutex> lock(m_FreeMutex);
-		m_FreeQueue.push(fn);
-	}
-
-	void VulkanRenderer::FreeQueue()
-	{
-		LU_PROFILE("VkRenderer::FreeQueue()");
-
-		std::scoped_lock<std::mutex> lock(m_FreeMutex);
-		while (!m_FreeQueue.empty())
-		{
-			m_FreeQueue.front()();
-			m_FreeQueue.pop();
-		}
-	}
-
 	void VulkanRenderer::Recreate(uint32_t width, uint32_t height, bool vsync)
 	{
 		// TODO: ...

@@ -14,7 +14,6 @@ namespace Lumen::Internal
     hintinline void DesktopWindow::SwapBuffers()
     {
         LU_PROFILE("DesktopWindow::SwapBuffers()");
-        m_Renderer->FreeQueue();
     }
 
     forceinline void DesktopWindow::Resize(uint32_t width, uint32_t height)

@@ -13,7 +13,7 @@
 namespace Lumen::Internal
 {
 
-    class CommandView;
+    class CommandBuffer;
 
     ////////////////////////////////////////////////////////////////////////////////////
     // Convert functions
@@ -44,17 +44,17 @@ namespace Lumen::Internal
     {
     public:
         // Constructors & Destructor
-        VulkanImage(const CommandView& initCmd, const ImageSpecification& imageSpecs, const SamplerSpecification& samplerSpecs);
-        VulkanImage(const CommandView& initCmd, const ImageSpecification& imageSpecs, const SamplerSpecification& samplerSpecs, const std::filesystem::path& imagePath);
+        VulkanImage(const CommandBuffer& initCmd, const ImageSpecification& imageSpecs, const SamplerSpecification& samplerSpecs);
+        VulkanImage(const CommandBuffer& initCmd, const ImageSpecification& imageSpecs, const SamplerSpecification& samplerSpecs, const std::filesystem::path& imagePath);
         VulkanImage(const ImageSpecification& imageSpecs, VkImage image, VkImageView imageView); // Note: This exists for swapchain images
         ~VulkanImage();
 
         // Methods
-        void SetData(const CommandView& cmd, void* data, size_t size);
+        void SetData(const CommandBuffer& cmd, void* data, size_t size);
 
-        void Resize(const CommandView& cmd, uint32_t width, uint32_t height);
+        void Resize(const CommandBuffer& cmd, uint32_t width, uint32_t height);
 
-        void Transition(const CommandView& cmd, ImageLayout initial, ImageLayout final);
+        void Transition(const CommandBuffer& cmd, ImageLayout initial, ImageLayout final);
 
         // Getters
         forceinline const ImageSpecification& GetSpecification() const { return m_ImageSpecification; }
@@ -71,13 +71,13 @@ namespace Lumen::Internal
 
     private:
         // Create & Destroy
-        void CreateImage(const CommandView& cmd, uint32_t width, uint32_t height);
-        void CreateImage(const CommandView& cmd, const std::filesystem::path& imagePath);
-        void GenerateMipmaps(const CommandView& cmd, VkImage& image, VkFormat imageFormat, VkImageLayout desiredLayout, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
+        void CreateImage(const CommandBuffer& cmd, uint32_t width, uint32_t height);
+        void CreateImage(const CommandBuffer& cmd, const std::filesystem::path& imagePath);
+        void GenerateMipmaps(const CommandBuffer& cmd, VkImage& image, VkFormat imageFormat, VkImageLayout desiredLayout, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
         void DestroyImage();
 
         // Private methods
-        void SetData(const CommandView& cmd, void* data, size_t size, ImageLayout desiredLayout);
+        void SetData(const CommandBuffer& cmd, void* data, size_t size, ImageLayout desiredLayout);
         std::tuple<VkPipelineStageFlags, VkPipelineStageFlags, VkImageMemoryBarrier> GetImageBarrier(VkImageLayout src, VkImageLayout dst, uint32_t mipLevels) const;
 
     private:

@@ -2,6 +2,7 @@
 
 #include "Lumen/Internal/Renderer/ImageSpec.hpp"
 #include "Lumen/Internal/Renderer/RendererSpec.hpp"
+#include "Lumen/Internal/Renderer/FrameGraph.hpp"
 
 #include "Lumen/Internal/Vulkan/VulkanRenderer.hpp"
 
@@ -23,9 +24,9 @@ namespace Lumen::Internal
         ~Renderer();
 
         // Methods
-        //inline void BeginFrame() { m_Renderer.BeginFrame(); }
-        //inline void EndFrame() { m_Renderer.EndFrame(); }
-        //inline void Present() { m_Renderer.Present(); }
+        forceinline void BeginFrame() { m_Renderer.BeginFrame(); }
+        forceinline void EndFrame() { m_Renderer.EndFrame(); }
+        forceinline void Present() { m_Renderer.Present(); }
 
         // Object methods
         //inline void Begin(CommandBuffer& cmdBuf) { m_Renderer.Begin(cmdBuf); }
@@ -42,10 +43,11 @@ namespace Lumen::Internal
         //inline void DrawIndexed(CommandBuffer& cmdBuf, uint32_t indexCount, uint32_t instanceCount = 1) { m_Renderer.DrawIndexed(cmdBuf, indexCount, instanceCount); }
         //inline void DrawIndexed(CommandBuffer& cmdBuf, IndexBuffer& indexBuffer, uint32_t instanceCount = 1) { m_Renderer.DrawIndexed(cmdBuf, indexBuffer, instanceCount); }
 
-        // Internal
-        forceinline void Free(const FreeFn& fn) { m_Renderer.Free(fn); }
-        forceinline void FreeQueue() { m_Renderer.FreeQueue(); }
+        // Frame
+        forceinline void BakeFrameGraph(const FrameGraph& frame, uint8_t frameIndex) { return m_Renderer.BakeFrameGraph(frame, frameIndex); }
+        forceinline void BakeCurrentFrameGraph(const FrameGraph& frame) { return m_Renderer.BakeCurrentFrameGraph(frame); }
 
+        // Internal
         forceinline void Recreate(uint32_t width, uint32_t height, bool vsync) { m_Renderer.Recreate(width, height, vsync); }
 
         // Getters

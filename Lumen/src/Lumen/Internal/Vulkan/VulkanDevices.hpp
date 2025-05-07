@@ -92,7 +92,7 @@ namespace Lumen::Internal
         VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
 
         // Getters
-        inline VkPhysicalDevice GetVkPhysicalDevice() const { return m_PhysicalDevice; }
+        forceinline VkPhysicalDevice GetVkPhysicalDevice() const { return m_PhysicalDevice; }
         
     private:
         // Private methods
@@ -120,13 +120,13 @@ namespace Lumen::Internal
         void Wait() const;
 
         // Getters
-        inline VkDevice GetVkDevice() const { return m_LogicalDevice; }
+        forceinline VkDevice GetVkDevice() const { return m_LogicalDevice; }
 
-        inline VkQueue GetGraphicsQueue() const { return m_GraphicsQueue; }
-        inline VkQueue GetComputeQueue() const { return m_ComputeQueue; }
-        inline VkQueue GetPresentQueue() const { return m_PresentQueue; }
+        forceinline VkQueue GetGraphicsQueue() const { return m_GraphicsQueue; }
+        forceinline VkQueue GetComputeQueue() const { return m_ComputeQueue; }
+        forceinline VkQueue GetPresentQueue() const { return m_PresentQueue; }
 
-        inline VulkanPhysicalDevice& GetPhysicalDevice() const { return m_PhysicalDevice; }
+        forceinline VulkanPhysicalDevice& GetPhysicalDevice() const { return m_PhysicalDevice; }
 
     private:
         VulkanPhysicalDevice& m_PhysicalDevice;

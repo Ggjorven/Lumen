@@ -5,7 +5,7 @@ namespace Lumen::Internal
 	////////////////////////////////////////////////////////////////////////////////////
 	// Constructor & Destructor
 	////////////////////////////////////////////////////////////////////////////////////
-	hintinline VulkanImage::VulkanImage(const CommandView& initCmd, const ImageSpecification& imageSpecs, const SamplerSpecification& samplerSpecs)
+	hintinline VulkanImage::VulkanImage(const CommandBuffer& initCmd, const ImageSpecification& imageSpecs, const SamplerSpecification& samplerSpecs)
 		: m_ImageSpecification(imageSpecs), m_SamplerSpecification(samplerSpecs)
 	{
 		LU_ASSERT((static_cast<bool>(m_ImageSpecification.Usage & ImageUsage::Colour) || static_cast<bool>(m_ImageSpecification.Usage & ImageUsage::DepthStencil)), "[VulkanImage] Tried to create image without specifying if it's a Colour or Depth image.");
@@ -13,7 +13,7 @@ namespace Lumen::Internal
 		CreateImage(initCmd, m_ImageSpecification.Width, m_ImageSpecification.Height);
 	}
 
-	hintinline VulkanImage::VulkanImage(const CommandView& initCmd, const ImageSpecification& imageSpecs, const SamplerSpecification& samplerSpecs, const std::filesystem::path& imagePath)
+	hintinline VulkanImage::VulkanImage(const CommandBuffer& initCmd, const ImageSpecification& imageSpecs, const SamplerSpecification& samplerSpecs, const std::filesystem::path& imagePath)
 		: m_ImageSpecification(imageSpecs), m_SamplerSpecification(samplerSpecs)
 	{
 		LU_ASSERT((static_cast<bool>(m_ImageSpecification.Usage & ImageUsage::Colour) || static_cast<bool>(m_ImageSpecification.Usage & ImageUsage::DepthStencil)), "[VulkanImage] Tried to create image without specifying if it's a Colour or Depth image.");
@@ -34,7 +34,7 @@ namespace Lumen::Internal
 	////////////////////////////////////////////////////////////////////////////////////
 	// Methods
 	////////////////////////////////////////////////////////////////////////////////////
-	void VulkanImage::SetData(const CommandView& cmd, void* data, size_t size)
+	void VulkanImage::SetData(const CommandBuffer& cmd, void* data, size_t size)
 	{
 		SetData(cmd, data, size, m_ImageSpecification.Layout);
 	}

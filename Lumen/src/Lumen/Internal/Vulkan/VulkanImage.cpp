@@ -40,7 +40,7 @@ namespace Lumen::Internal
     ////////////////////////////////////////////////////////////////////////////////////
     // Methods
     ////////////////////////////////////////////////////////////////////////////////////
-    void VulkanImage::Resize(const CommandView& cmd, uint32_t width, uint32_t height)
+    void VulkanImage::Resize(const CommandBuffer& cmd, uint32_t width, uint32_t height)
     {
         DestroyImage();
 
@@ -50,13 +50,13 @@ namespace Lumen::Internal
         CreateImage(cmd, width, height);
     }
 
-    void VulkanImage::Transition(const CommandView& cmd, ImageLayout initial, ImageLayout final)
+    void VulkanImage::Transition(const CommandBuffer& cmd, ImageLayout initial, ImageLayout final)
     {
         if (initial == final)
             return;
 
         auto [srcStage, dstStage, imageBarrier] = GetImageBarrier(ImageLayoutToVkImageLayout(initial), ImageLayoutToVkImageLayout(final), m_Miplevels);
-        vkCmdPipelineBarrier(cmd.GetInternalCommandView().GetVkCommandBuffer(), srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+        vkCmdPipelineBarrier(cmd.GetInternalCommandBuffer().GetVkCommandBuffer(), srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 
         m_ImageSpecification.Layout = final;
     }
@@ -64,7 +64,7 @@ namespace Lumen::Internal
     ////////////////////////////////////////////////////////////////////////////////////
     // Create & Destroy
     ////////////////////////////////////////////////////////////////////////////////////
-    void VulkanImage::CreateImage(const CommandView& cmd, uint32_t width, uint32_t height)
+    void VulkanImage::CreateImage(const CommandBuffer& cmd, uint32_t width, uint32_t height)
     {
         ImageLayout desiredLayout = m_ImageSpecification.Layout;
 
@@ -78,7 +78,7 @@ namespace Lumen::Internal
         Transition(cmd, ImageLayout::Undefined, desiredLayout);
     }
 
-    void VulkanImage::CreateImage(const CommandView& cmd, const std::filesystem::path& imagePath)
+    void VulkanImage::CreateImage(const CommandBuffer& cmd, const std::filesystem::path& imagePath)
     {
         ImageLayout desiredLayout = m_ImageSpecification.Layout;
 
@@ -107,11 +107,11 @@ namespace Lumen::Internal
         stbi_image_free(static_cast<void*>(pixels));
     }
 
-    void VulkanImage::GenerateMipmaps(const CommandView& cmd, VkImage& image, VkFormat imageFormat, VkImageLayout desiredLayout, int32_t texWidth, int32_t texHeight, uint32_t mipLevels)
+    void VulkanImage::GenerateMipmaps(const CommandBuffer& cmd, VkImage& image, VkFormat imageFormat, VkImageLayout desiredLayout, int32_t texWidth, int32_t texHeight, uint32_t mipLevels)
     {
         LU_ASSERT((mipLevels != 0 && mipLevels != 1), "[VkImage] Trying to generate mipmaps with no miplevels.");
 
-        VkCommandBuffer commandBuffer = cmd.GetInternalCommandView().GetVkCommandBuffer();
+        VkCommandBuffer commandBuffer = cmd.GetInternalCommandBuffer().GetVkCommandBuffer();
 
         // Check if image format supports linear blitting
         VkFormatProperties formatProperties;
@@ -182,27 +182,16 @@ namespace Lumen::Internal
 
     void VulkanImage::DestroyImage()
     {
-        VulkanRenderer::GetRenderer().Free([sampler = m_Sampler, imageView = m_ImageView, image = m_Image, allocation = m_Allocation]()
-        {
-            auto device = VulkanContext::GetVulkanDevice().GetVkDevice();
-
-            if (sampler)
-                vkDestroySampler(device, sampler, nullptr);
-            if (imageView)
-                vkDestroyImageView(device, imageView, nullptr);
-
-            if (image != VK_NULL_HANDLE && allocation != VK_NULL_HANDLE)
-                VulkanAllocator::DestroyImage(image, allocation);
-        });
+        VulkanRenderer::GetRenderer().GetGarbageCollector().Collect(ImageGarbageEntry(m_Image, m_Allocation, m_ImageView, m_Sampler));
     }
 
-    void VulkanImage::SetData(const CommandView& cmd, void* data, size_t size, ImageLayout desiredLayout)
+    void VulkanImage::SetData(const CommandBuffer& cmd, void* data, size_t size, ImageLayout desiredLayout)
     {
         VulkanStagingBuffer& stagingBuffer = VulkanRenderer::GetRenderer().GetStagingBuffers().GetBuffer(size);
         stagingBuffer.SetData(data, size);
 
         Transition(cmd, m_ImageSpecification.Layout, ImageLayout::TransferDst);
-        VulkanAllocator::CopyBufferToImage(cmd.GetInternalCommandView().GetVkCommandBuffer(), stagingBuffer.Buffer, m_Image, m_ImageSpecification.Width, m_ImageSpecification.Height);
+        VulkanAllocator::CopyBufferToImage(cmd.GetInternalCommandBuffer().GetVkCommandBuffer(), stagingBuffer.Buffer, m_Image, m_ImageSpecification.Width, m_ImageSpecification.Height);
 
         if (m_ImageSpecification.MipMaps)
         {
